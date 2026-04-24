@@ -31,6 +31,10 @@ tar xzf aegis-cli-darwin-arm64.tar.gz
 
 Not all platforms are available in every release. Check the release assets.
 
+## Documentation
+
+See the [User Guide](USER-GUIDE.md) for the complete flag reference, tier comparison, and feature documentation.
+
 ## License
 
 The AEGIS binary runs in Community mode (free, 50-finding cap) by default.
