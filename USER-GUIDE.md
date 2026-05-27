@@ -1,7 +1,7 @@
 # AEGIS User Guide
 
-**Version:** 3.2.0
-**Engine:** Rust native (14 languages, 103 CWE patterns, 35+ report formats)
+**Version:** 3.5.2
+**Engine:** Rust native (14 languages, 121 CWE patterns, 45 report formats)
 **License tiers:** Community (free) / Pro / Premium / Enterprise
 
 ---
@@ -24,7 +24,7 @@ tar xzf aegis-cli-<platform>.tar.gz -C ~/.aegis/bin/
 
 Available platforms: `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `win32-x64`
 
-The binary is a single file (~7 MB compressed, ~30 MB uncompressed), fully static on Linux (musl), with zero system dependencies.
+The binary is a single file (~7 MB compressed, ~24 MB uncompressed), fully static on Linux (musl), with zero system dependencies.
 
 ## License activation
 
@@ -216,6 +216,16 @@ aegis mcp-serve --scan-dir ./aegis-reports
 | `--select-star` | `aegis-select-star.html` | SELECT * column analysis. Traces which columns code uses, produces replacement SELECT lists. | Pro |
 | `--financial` | `aegis-financial-consistency.html` | Financial consistency. Mixed rounding, float precision loss, int truncation on money values. | Pro |
 
+### Architecture and analysis (continued)
+
+| Flag | Output file | What it does | Tier |
+|---|---|---|---|
+| `--complexity` | `aegis-complexity.html` | Cyclomatic and cognitive complexity per function. Risk level classification (high/moderate/low). | Pro |
+| `--fuzz-targets` | `aegis-fuzz-targets.html` | Prioritized entry points for fuzzing based on attack surface score, input handling, and complexity. | Pro |
+| `--invariants` | `aegis-invariants.html` | Detected program invariants: null checks, bounds checks, error handling patterns, retry logic. | Pro |
+| `--gap-analysis` | `aegis-gap-analysis.html` | Per-framework compliance gap identification with remediation guidance. | Pro |
+| `--shield-watch` | `aegis-shield-watch.html` | Active scanning history with anomaly detection. | Pro |
+
 ### Scan modifiers
 
 | Flag | What it does | Tier |
@@ -225,6 +235,9 @@ aegis mcp-serve --scan-dir ./aegis-reports
 | `--fail-on <SEV>` | Exit non-zero if findings at this severity or above. Values: `critical`, `high`, `medium`, `low`. | All |
 | `--trend <FILE>` | Compare against a baseline (SARIF or `aegis-summary.json`). New, resolved, and changed findings. | Pro |
 | `--brand <FILE>` | White-label branding (JSON). HTML reports use your brand. SARIF/OSCAL/JSON stay standards-formatted. | Premium |
+| `--false-positive-threshold <FLOAT>` | Suppress findings with FP score >= threshold (0.0-1.0). | All |
+| `--engineer` | Engineer triage mode — findings, STRIDE, resource leaks, log risk, tech debt, patches, dep audit, dep accuracy, SARIF, JSON summary. Excludes compliance/M&A/evidence. | All |
+| `--compliance-profile` | Compliance profile — OSCAL, DORA, ISO 27001, NIST CSF, scoring, GRC summary, gap analysis, JSON summary. For auditors and GRC analysts. | Enterprise |
 | `--exclude <DIRS>` | Exclude directories. Repeatable (`--exclude vendor --exclude staging`) or comma-separated. Built-in excludes: `node_modules`, `.git`, `vendor`, `target`, `__pycache__`, `dist`, `build`, `.next`, `coverage`, `.aegis`, `deployments`, `.aws-sam`, `.terraform`, `.serverless`, `.venv`, `venv`, `.env`, `env`. | All |
 
 ### Supply chain / runtime
@@ -368,10 +381,13 @@ After every scan, critical and high findings are listed with file:line locations
 The `--html` vulnerability report is interactive:
 
 - **Severity toggles** — Click Critical / High / Medium / Low buttons to show/hide by severity
+- **Reachability filter** — Click Reachable / Unreachable counts to filter findings by reachability status
 - **File search** — Type a path to filter findings to a specific file or directory
 - **Sortable columns** — Click Severity, CWE, File, or Line headers to re-sort
 - **Collapse/expand** — Toggle finding details open or closed in bulk
 - **Criticals-first** — Default sort puts critical findings at the top
+- **Trust badges** — Each finding shows its trust classification (Untrusted through Trusted)
+- **Cross-linked reports** — Breadcrumb navigation and clickable counts linking to related reports
 
 All filtering is client-side (vanilla JS, no dependencies). The HTML file is fully self-contained — share it as a single file.
 
@@ -402,7 +418,7 @@ All languages get: function extraction, call graph construction, CWE pattern mat
 
 ## CWE coverage
 
-103 CWE patterns detected by the AST-based engine. Key categories:
+121 CWE patterns detected by the AST-based engine. Key categories:
 
 | CWE | Name | Severity |
 |---|---|---|
@@ -420,7 +436,7 @@ All languages get: function extraction, call graph construction, CWE pattern mat
 | CWE-798 | Hardcoded Credentials | Critical |
 | CWE-918 | Server-Side Request Forgery | High |
 
-Full list: 103 patterns including buffer overflows, race conditions, path traversal, open redirects, prototype pollution, format strings, null dereference, use-after-free, double-free, and more.
+Full list: 121 patterns including buffer overflows, race conditions, path traversal, open redirects, prototype pollution, format strings, null dereference, use-after-free, double-free, IAM misconfigurations, and more.
 
 ### Language-aware suppressions
 
@@ -488,10 +504,10 @@ npx @raknor/aegis scan ./target
 │  → AST extraction                   │
 │  → Call graph (petgraph)            │
 │  → Taint analysis (sources → sinks)│
-│  → 103 CWE pattern matching        │
+│  → 121 CWE pattern matching        │
 │  → Capability detection (NIST)      │
 │                                     │
-│  35+ report generators              │
+│  45 report generators               │
 │  Ed25519 + FIPS P-256 license       │
 │  Everything local — nothing uploaded│
 └─────────────────────────────────────┘
@@ -504,5 +520,5 @@ npx @raknor/aegis scan ./target
 
 ---
 
-*AEGIS v3.2.0 — Pareidolia LLC (d/b/a Raknor AI / Equilateral AI)*
+*AEGIS v3.5.2 — Pareidolia LLC (d/b/a Raknor AI / Equilateral AI)*
 *https://aegis.raknor.ai*
