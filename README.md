@@ -2,24 +2,23 @@
 
 Pre-built binaries for the [AEGIS](https://aegis.raknor.ai) security scanner.
 
-## Install via npm (recommended)
+## Quick Start
+
+Download the binary for your platform from [Releases](https://github.com/raknor-ai/aegis-releases/releases/latest), extract, and scan:
 
 ```bash
-npx @raknor/aegis scan ./your-project
-```
-
-The npm package auto-downloads the correct binary for your platform on first run.
-
-## Manual download
-
-Download the tarball for your platform from [Releases](https://github.com/raknor-ai/aegis-releases/releases), extract, and add to PATH:
-
-```bash
+# macOS Apple Silicon
 tar xzf aegis-cli-darwin-arm64.tar.gz
-./aegis scan-local ./your-project --all
+chmod +x aegis
+./aegis scan ./your-project
+
+# Linux x64
+tar xzf aegis-cli-linux-x64.tar.gz
+chmod +x aegis
+./aegis scan ./your-project
 ```
 
-## Available platforms
+## Available Platforms
 
 | Platform | Asset |
 |---|---|
@@ -27,20 +26,43 @@ tar xzf aegis-cli-darwin-arm64.tar.gz
 | macOS Intel | `aegis-cli-darwin-x64.tar.gz` |
 | Linux x64 | `aegis-cli-linux-x64.tar.gz` |
 | Linux ARM64 | `aegis-cli-linux-arm64.tar.gz` |
-| Windows x64 | `aegis-cli-win32-x64.tar.gz` |
+| Windows x64 | `aegis-cli-win32-x64.zip` |
 
-Not all platforms are available in every release. Check the release assets.
+## CI/CD
+
+```yaml
+# GitHub Actions
+- name: Download AEGIS
+  run: |
+    curl -sL https://github.com/raknor-ai/aegis-releases/releases/latest/download/aegis-cli-linux-x64.tar.gz | tar xz
+    chmod +x aegis
+- name: AEGIS Security Scan
+  run: ./aegis scan . --sarif --fail-on critical
+```
+
+## Verify Downloads
+
+Each release includes a `SHA256SUMS` file:
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+## License Activation
+
+```bash
+# Activate (writes to ~/.raknor/license.json)
+aegis activate --key AEGIS-...
+
+# Or environment variable
+export AEGIS_LICENSE_KEY="AEGIS-..."
+```
+
+Without a key, AEGIS runs in **Community mode**: full Rust engine, 50-finding cap, SARIF + HTML + JSON output, compliance readiness preview.
 
 ## Documentation
 
 See the [User Guide](USER-GUIDE.md) for the complete flag reference, tier comparison, and feature documentation.
 
-## License
-
-The AEGIS binary runs in Community mode (free, 50-finding cap) by default.
-Set `AEGIS_PRODUCT_KEY` for Pro/Premium/Enterprise tiers.
-
-See [aegis.raknor.ai](https://aegis.raknor.ai) for pricing.
-
 ---
-*Pareidolia LLC (d/b/a Raknor AI)*
+*Pareidolia LLC (d/b/a Raknor AI / Equilateral AI)*
