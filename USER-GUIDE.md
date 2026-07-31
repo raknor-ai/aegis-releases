@@ -1,7 +1,7 @@
 # AEGIS User Guide
 
-**Version:** 3.5.2
-**Engine:** Rust native (14 languages, 121 CWE patterns, 45 report formats)
+**Version:** 3.7.1
+**Engine:** Rust native (14 languages, 115 detection patterns covering 126 CWE classes, 40 report formats)
 **License tiers:** Community (free) / Pro / Premium / Enterprise
 
 ---
@@ -9,35 +9,28 @@
 ## Install
 
 ```bash
-# Via npm (auto-downloads the platform binary on first run)
-npx @raknor/aegis scan ./your-project
-
-# Local project install (recommended for CI)
-npm install --save-dev @raknor/aegis
-npx aegis scan .
-
-# Or download directly from:
+# Download the latest binary for your platform
 # https://github.com/raknor-ai/aegis-releases/releases/latest
-tar xzf aegis-cli-<platform>.tar.gz -C ~/.aegis/bin/
-~/.aegis/bin/aegis scan-local ./your-project
+tar xzf aegis-cli-darwin-arm64.tar.gz   # macOS Apple Silicon
+tar xzf aegis-cli-darwin-x64.tar.gz     # macOS Intel
+tar xzf aegis-cli-linux-x64.tar.gz      # Linux x64
+tar xzf aegis-cli-linux-arm64.tar.gz    # Linux ARM64 (Graviton)
+chmod +x aegis
+./aegis scan ./your-project
 ```
 
 Available platforms: `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `win32-x64`
 
-The binary is a single file (~7 MB compressed, ~24 MB uncompressed), fully static on Linux (musl), with zero system dependencies.
+The binary is a single file (~33 MB), fully static on Linux (musl), with zero system dependencies.
 
 ## License activation
 
 ```bash
-# CLI activation (writes to ~/.config/aegis/license)
-aegis activate AEGIS-...
+# CLI activation (writes to ~/.raknor/license.json)
+aegis activate --key AEGIS-...
 
 # Or environment variable (per-session / CI)
-export AEGIS_PRODUCT_KEY="AEGIS-..."
-
-# Or manual config file
-mkdir -p ~/.config/aegis
-echo "AEGIS-..." > ~/.config/aegis/license
+export AEGIS_LICENSE_KEY="AEGIS-..."
 
 # Verify
 aegis license
@@ -55,10 +48,10 @@ Every tier includes everything below it. The same binary ships everywhere — th
 
 | What you get | Flag |
 |---|---|
-| Full Rust AST scan (14 languages, 103 CWE patterns) | — |
+| Full Rust AST scan (14 languages, 115 detection patterns) | — |
 | 50 findings shown (total count always reported) | — |
 | Call graph, dead code, taint analysis | — |
-| Compliance traffic-light readiness (8 frameworks) | — |
+| Compliance risk mapping (13 frameworks) — identifies which controls are at risk, not certification | — |
 | SARIF 2.1.0 report | `--sarif` |
 | Interactive HTML findings report | `--html` |
 | JSON summary (machine-readable) | `--json-summary` |
@@ -75,9 +68,9 @@ Everything in Community, plus **unlimited findings** and:
 
 | Bundle | What you get | Flags |
 |---|---|---|
-| **Remediate** | Unlimited findings, auto-patch suggestions, trend analysis | `--patches`, `--trend` |
-| **Refactor** | Tech debt, bounded context, env divergence, IaC divergence, dep audit, dep accuracy, PII-in-logs, API surface, SELECT\* analysis, financial consistency | `--tech-debt`, `--bounded-context`, `--env-divergence`, `--iac-divergence`, `--dep-audit`, `--dep-accuracy`, `--log-risk`, `--api-surface`, `--select-star`, `--financial` |
-| **Shield** | STRIDE threat model, WAF rules (3 formats), DAST, canary plans, resource leak detection, IR playbooks, IAM analysis, RDS compliance, container audit | `--stride`, `--waf-rules`, `--dast`, `--canary`, `--resource-leaks`, `--ir-playbook`, `--iam`, `--rds-compliance`, `--container-audit` |
+| **Remediate** | Unlimited findings, auto-fix patches (14 CWEs), trend analysis | `--auto-fix`, `--trend` |
+| **Refactor** | Tech debt, bounded context, env divergence, IaC divergence, dep audit, dep accuracy, PII-in-logs, API surface | `--tech-debt`, `--bounded-context`, `--env-divergence`, `--iac-divergence`, `--dep-audit`, `--dep-accuracy`, `--log-risk`, `--api-surface` |
+| **Shield** | STRIDE threat model, WAF rules (3 formats), DAST / ConfirmedFinding, IAM analysis, container audit | `--stride`, `--waf-rules`, `--dast`, `--iam`, `--container-audit` |
 
 ### Premium
 
@@ -87,8 +80,6 @@ Everything in Pro, plus:
 |---|---|
 | M&A Technical Due Diligence report | `--due-diligence` |
 | FedRAMP Continuous Monitoring packages | `--conmon` |
-| Governed code transform engine | `--transform` |
-| Auto-fix patches (git-apply compatible, 14 CWEs) | `--auto-fix` |
 | White-label branding | `--brand` |
 
 ### Enterprise
@@ -97,8 +88,18 @@ Everything in Premium, plus:
 
 | Bundle | What you get | Flags |
 |---|---|---|
-| **Certify** | OSCAL 1.1.2 (SSP/AR/POA&M), DORA Pillar I-V, ISO 27001:2022, NIST CSF 2.0, OpenVEX, SBOM (CycloneDX + SPDX), posture scoring, 12-framework compliance map, evidence bundles | `--oscal`, `--dora`, `--iso-27001`, `--nist-csf`, `--vex`, `--sbom`, `--scoring`, `--compliance`, `--evidence-bundle` |
-| **Defend** | New Relic APM correlation, infrastructure discovery | `--newrelic` |
+| **Certify** | OSCAL 1.1.2 (SSP/AR/POA&M), DORA Pillar I-V, ISO 27001:2022, NIST CSF 2.0, OpenVEX, SBOM (CycloneDX + SPDX), 13-framework compliance risk map, evidence bundles. These map findings to framework controls — they identify which controls are at risk, not certify that they are satisfied. | `--oscal`, `--dora`, `--iso-27001`, `--nist-csf`, `--vex`, `--sbom`, `--compliance`, `--evidence-bundle` |
+
+### Engineer mode
+
+Interactive operator-assist tools that use the operator's own authenticated access. These are not batch-scan features — they run against your own infrastructure on demand.
+
+| What you get | Flag |
+|---|---|
+| New Relic APM correlation — maps findings to hot execution paths | `--newrelic` |
+| CloudWatch Logs Insights correlation | `--cloudwatch` |
+| ELB/ALB log analysis | `aegis log elb-*` |
+| RDS STIG/CIS database compliance check | `--rds-compliance` |
 
 ---
 
@@ -106,31 +107,31 @@ Everything in Premium, plus:
 
 ```bash
 # Scan everything, generate all reports
-aegis scan-local ./target --all
+aegis scan ./target --all
 
-# Engineer triage mode (findings + patches + STRIDE + tech debt — no compliance)
-aegis scan-local ./target --engineer
+# Engineer triage mode (findings + auto-fix + STRIDE + tech debt — no compliance)
+aegis scan ./target --engineer
 
 # Specific reports
-aegis scan-local ./target --sarif --html --scoring
+aegis scan ./target --sarif --html --scoring
 
 # CI gate — fail on critical findings
-aegis scan-local ./target --sarif --fail-on critical
+aegis scan ./target --sarif --fail-on critical
 
 # Delta scan — only files changed since main
-aegis scan-local ./target --since origin/main --sarif --fail-on critical
+aegis scan ./target --since origin/main --sarif --fail-on critical
 
 # Pre-commit hook — only staged + unstaged changes
-aegis scan-local ./target --changed-only --fail-on high
+aegis scan ./target --changed-only --fail-on high
 
 # White-label
-aegis scan-local ./target --all --brand .aegis-brand.json
+aegis scan ./target --all --brand .aegis-brand.json
 
 # Trend analysis (compare against a baseline)
-aegis scan-local ./target --all --trend previous-scan/aegis-summary.json
+aegis scan ./target --all --trend previous-scan/aegis-summary.json
 
 # GRC summary for questionnaires
-aegis scan-local ./target --grc-summary --project-name "My Product"
+aegis scan ./target --grc-summary --project-name "My Product"
 
 # Explain a code flow (scoped to a function/route)
 aegis explain-flow ./target --entry "POST /api/purchase"
@@ -163,25 +164,21 @@ aegis mcp-serve --scan-dir ./aegis-reports
 
 | Flag | Output file | What it does | Tier |
 |---|---|---|---|
-| `--sarif` | `aegis-report.sarif.json` | SARIF 2.1.0 — upload to GitHub Security, Defender, or any SARIF consumer. All findings with CWE, file:line, severity, trust level. | Community |
+| `--sarif` | `aegis-report.sarif.json` | SARIF 2.1.0 — upload to GitHub Security, Defender, or any SARIF consumer. All findings with CWE, file:line, severity, trust level, verification class (M/J), calibrated confidence. | Community |
 | `--html` | `aegis-report.html` | Interactive HTML findings report with severity toggles, file search, sortable columns, collapse/expand, CWE distribution, and trust classification. Criticals sort first. | Community |
 | `--stride` | `aegis-stride.html` | STRIDE threat model — Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege. | Pro |
 | `--dep-audit` | `aegis-dep-audit.html` | Dependency vulnerability audit. Checks `requirements.txt`, `package.json`, `go.mod` against known CVEs. | Pro |
 | `--log-risk` | `aegis-log-risk.html` | PII-in-logs detection. Five categories: PiiVariable, PiiPattern, DebugPii, PrintInProd, ExceptionLeak. | Pro |
 | `--iam` | `aegis-iam-analysis.html/json` | IAM policy analysis (FedRAMP KSI #1). Scans Terraform/CloudFormation for wildcard actions, open ingress, missing auth, public S3, hardcoded account IDs, missing TLS, CORS misconfig. | Pro |
-| `--rds-compliance` | `aegis-rds-compliance.html/json` | RDS STIG/CIS database compliance check. Connection configs, parameter groups, encryption settings. | Pro |
-| `--dast` | — | Dynamic Application Security Testing probes against running endpoints. Requires `~/.raknor/config.json`. | Pro |
+| `--dast` | — | ConfirmedFinding: derives exploit probes from static taint paths, executes against a running target, observes the vulnerability. Demonstrated for CWE-89 (SQL injection) and CWE-94 (code injection). | Pro |
 | `--container-audit` | `aegis-container-audit.html` | Discovers Dockerfiles, classifies containers (Service/Base/Infra/Emulator/DevTest/Ops), maps coupling. | Pro |
 
 ### Remediation reports
 
 | Flag | Output file | What it does | Tier |
 |---|---|---|---|
-| `--patches` | `aegis-patches.html` | Auto-generated patch suggestions for common CWEs. Before/after code with explanation. | Pro |
-| `--auto-fix` | `aegis-autofix/` | Git-apply compatible auto-fix patches for 14 CWE categories. | Premium |
+| `--auto-fix` | `aegis-autofix/` | Git-apply compatible auto-fix patches for 14 CWE categories. | Pro |
 | `--waf-rules` | `aegis-waf-*.conf/json` | WAF rules from findings — ModSecurity, AWS WAF, and Cloudflare formats. | Pro |
-| `--ir-playbook` | `aegis-ir-playbook.json` | Incident response playbook (NIST 800-61). Containment, eradication, recovery steps per finding. | Pro |
-| `--transform` | — | Governed code transformation plan with validation gates and decision records with provenance. | Premium |
 
 ### Compliance and evidence
 
@@ -193,9 +190,9 @@ aegis mcp-serve --scan-dir ./aegis-reports
 | `--nist-csf` | `aegis-nist-csf.json` | NIST Cybersecurity Framework 2.0 evidence. All 6 functions. | Enterprise |
 | `--vex` | `aegis-vex.json` | OpenVEX vulnerability exchange. Machine-readable for supply chain transparency. | Enterprise |
 | `--sbom` | `aegis-sbom.cdx.json`, `aegis-sbom.spdx.json` | Software Bill of Materials in CycloneDX 1.5 and SPDX formats. | Enterprise |
-| `--scoring` | `aegis-scoring.html` | Posture score. 6 domains, 0-100 scale, framework compliance matrix for 9 frameworks. | Enterprise |
-| `--compliance` | `aegis-compliance.html` | 12-framework cross-reference. Every finding mapped to FedRAMP, SOC 2, ISO 27001, PCI-DSS, HIPAA, DORA, NIST CSF, CMMC, OWASP, EU AI Act, SEC/FINRA, DoD SRG. | Enterprise |
-| `--evidence-bundle` | Multiple files | All compliance formats + scoring + index. For certification pipeline submission. | Enterprise |
+| `--scoring` | `aegis-scoring.html` | Weighted security indicators across 6 domains. Informational — not a certification or grade. | Enterprise |
+| `--compliance` | `aegis-compliance.html` | 13-framework risk map. Every finding mapped to FedRAMP, SOC 2, ISO 27001, PCI-DSS, HIPAA, DORA, NIST CSF, CMMC, OWASP, EU AI Act, SEC/FINRA, DoD SRG. Identifies which controls are at risk. | Enterprise |
+| `--evidence-bundle` | Multiple files | All compliance formats + scoring + index. Input for compliance workflows — not standalone certification evidence. | Enterprise |
 | `--conmon` | `aegis-conmon.json` | FedRAMP Continuous Monitoring package. POA&M, assessment, deviations, SLA tracking. | Premium |
 | `--due-diligence` | `aegis-due-diligence.html` | M&A Technical Due Diligence. Traffic-light summary, risk rating, remediation estimate. | Premium |
 | `--grc-summary` | `aegis-grc-summary.html` | GRC Executive Summary for third-party questionnaires. | Pro |
@@ -207,24 +204,12 @@ aegis mcp-serve --scan-dir ./aegis-reports
 |---|---|---|---|
 | `--tech-debt` | `aegis-techdebt.html` | Tech debt: config typos (Levenshtein), dead code, heavyweight deps, TODO/FIXME, wildcard imports, long functions. | Pro |
 | `--bounded-context` | `aegis-bounded-context.html` | Architecture analysis. Call graph entry point tracing, container split suggestions (70% Jaccard threshold). | Pro |
-| `--resource-leaks` | `aegis-resource-leaks.html` | Resource leak detection: connections, cursors, file handles. Missing release, GC-dependent, unsafe, orphaned. | Pro |
 | `--api-surface` | `aegis-api-surface.txt` | API endpoint inventory. REST/GraphQL/gRPC across 13 framework patterns. | Pro |
 | `--dep-accuracy` | `aegis-dep-accuracy.html` | Declared vs imported dependencies. Finds bloat (unused) and phantom (undeclared). | Pro |
 | `--env-divergence` | `aegis-env-divergence.html/json` | Environment config drift. Prod vs dev divergences in env vars, feature flags, connection strings. | Pro |
 | `--iac-divergence` | `aegis-iac-divergence.json` | IaC resource divergence. Terraform tfvars, container defs, circuit breakers across environments. | Pro |
-| `--canary` | `aegis-canary.html`, `aegis-canary-manifest.json` | Canary deployment plan. Prioritizes services by risk. | Pro |
-| `--select-star` | `aegis-select-star.html` | SELECT * column analysis. Traces which columns code uses, produces replacement SELECT lists. | Pro |
-| `--financial` | `aegis-financial-consistency.html` | Financial consistency. Mixed rounding, float precision loss, int truncation on money values. | Pro |
-
-### Architecture and analysis (continued)
-
-| Flag | Output file | What it does | Tier |
-|---|---|---|---|
 | `--complexity` | `aegis-complexity.html` | Cyclomatic and cognitive complexity per function. Risk level classification (high/moderate/low). | Pro |
-| `--fuzz-targets` | `aegis-fuzz-targets.html` | Prioritized entry points for fuzzing based on attack surface score, input handling, and complexity. | Pro |
-| `--invariants` | `aegis-invariants.html` | Detected program invariants: null checks, bounds checks, error handling patterns, retry logic. | Pro |
 | `--gap-analysis` | `aegis-gap-analysis.html` | Per-framework compliance gap identification with remediation guidance. | Pro |
-| `--shield-watch` | `aegis-shield-watch.html` | Active scanning history with anomaly detection. | Pro |
 
 ### Scan modifiers
 
@@ -233,18 +218,13 @@ aegis mcp-serve --scan-dir ./aegis-reports
 | `--changed-only` | Only scan files changed in the git working tree (staged + unstaged). For pre-commit hooks. | All |
 | `--since <REF>` | Only scan files changed since a git ref (e.g., `origin/main`, `HEAD~3`). For CI delta scans. | All |
 | `--fail-on <SEV>` | Exit non-zero if findings at this severity or above. Values: `critical`, `high`, `medium`, `low`. | All |
+| `--env <NAME>` | Tag scan with environment (e.g., `production`, `staging`). Auto-detects CI provider if omitted. | All |
 | `--trend <FILE>` | Compare against a baseline (SARIF or `aegis-summary.json`). New, resolved, and changed findings. | Pro |
 | `--brand <FILE>` | White-label branding (JSON). HTML reports use your brand. SARIF/OSCAL/JSON stay standards-formatted. | Premium |
 | `--false-positive-threshold <FLOAT>` | Suppress findings with FP score >= threshold (0.0-1.0). | All |
-| `--engineer` | Engineer triage mode — findings, STRIDE, resource leaks, log risk, tech debt, patches, dep audit, dep accuracy, SARIF, JSON summary. Excludes compliance/M&A/evidence. | All |
+| `--engineer` | Engineer triage mode — findings, STRIDE, log risk, tech debt, auto-fix, dep audit, dep accuracy, SARIF, JSON summary. Excludes compliance/M&A/evidence. | All |
 | `--compliance-profile` | Compliance profile — OSCAL, DORA, ISO 27001, NIST CSF, scoring, GRC summary, gap analysis, JSON summary. For auditors and GRC analysts. | Enterprise |
 | `--exclude <DIRS>` | Exclude directories. Repeatable (`--exclude vendor --exclude staging`) or comma-separated. Built-in excludes: `node_modules`, `.git`, `vendor`, `target`, `__pycache__`, `dist`, `build`, `.next`, `coverage`, `.aegis`, `deployments`, `.aws-sam`, `.terraform`, `.serverless`, `.venv`, `venv`, `.env`, `env`. | All |
-
-### Supply chain / runtime
-
-| Flag | What it does | Tier |
-|---|---|---|
-| `--newrelic` | Correlate findings with New Relic APM runtime data. Confirms which findings are on hot execution paths. Requires `~/.raknor/config.json`. | Enterprise |
 
 ---
 
@@ -255,8 +235,8 @@ aegis mcp-serve --scan-dir ./aegis-reports
 Generate a scoped flow explainer (Markdown + HTML with Mermaid diagrams). Traces execution from an entry point through call graph, state machines, taint flows, and security findings.
 
 ```bash
-aegis explain-flow ./target --entry "create_application" --project-name "LendingStream"
-aegis explain-flow ./target --entry "/api/v1/loans"
+aegis explain-flow ./target --entry "create_order" --project-name "AcmeShop"
+aegis explain-flow ./target --entry "/api/v1/checkout"
 aegis explain-flow ./target --entry "routes/applicant.py" --max-depth 15
 ```
 
@@ -317,9 +297,7 @@ Lines of code:    126,334
 Findings:         468 (50 shown, community tier)
 Call graph:       4,094 nodes, 9,967 edges
 Dead code:        3,162 functions (1,205 confirmed)
-Capabilities:     42 NIST controls
 Tech debt:        1,619 findings
-Resource leaks:   59 findings
 
 Severity:  █ 1 critical  ███ 4 high  █████████ 20 medium  ████████████ 25 low
 Trust:     ████ 3 untrusted  ████████ 9 medium-trust  ██████ 4 trusted
@@ -334,7 +312,7 @@ Trust:     ████ 3 untrusted  ████████ 9 medium-trust  �
            XSS via innerHTML assignment
   ...
 
-Compliance Readiness
+Compliance Risk Map
 ────────────────────────────────────────────────────
 FedRAMP High       [████████████████████]  85%  BLOCKED
 FedRAMP Moderate   [████████████████████] 100%  AT RISK
@@ -358,13 +336,15 @@ Scan: 3.3s | License: Enterprise | Engine: Rust native
 
 After every scan, critical and high findings are listed with file:line locations, sorted by severity. This is the "what to fix first" view — no scrolling through HTML reports to find the worst problems.
 
-### Compliance traffic lights
+### Compliance risk indicators
+
+These show which compliance frameworks have findings that map to their controls. They identify risk areas — they do not certify compliance.
 
 | Status | Meaning |
 |---|---|
-| **READY** | No critical or high findings exceed the framework's threshold |
-| **AT RISK** | Findings exist but within threshold — warnings present |
-| **BLOCKED** | Critical or high findings exceed the framework's hard limit — certification would be denied |
+| **READY** | No critical or high findings map to this framework's controls |
+| **AT RISK** | Findings exist that map to this framework's controls — review recommended |
+| **BLOCKED** | Critical or high findings map to controls that would likely block certification |
 
 ### Trust levels
 
@@ -412,13 +392,13 @@ All filtering is client-side (vanilla JS, no dependencies). The HTML file is ful
 | Kotlin | `.kt`, `.kts` | tree-sitter (via Java) | Functions, imports |
 | Swift | `.swift` | tree-sitter | Functions, import declarations |
 
-All languages get: function extraction, call graph construction, CWE pattern matching, dead code detection, and cross-file taint analysis.
+All languages get: function extraction, call graph construction, CWE pattern matching, and dead code detection. Inter-procedural dataflow and taint analysis depth varies by language — TypeScript has measured parity; C/C++ are scoped to OS-command-injection; others are AST-pattern with heuristic analysis.
 
 ---
 
 ## CWE coverage
 
-121 CWE patterns detected by the AST-based engine. Key categories:
+115 detection patterns covering 126 CWE classes. Key categories:
 
 | CWE | Name | Severity |
 |---|---|---|
@@ -436,7 +416,7 @@ All languages get: function extraction, call graph construction, CWE pattern mat
 | CWE-798 | Hardcoded Credentials | Critical |
 | CWE-918 | Server-Side Request Forgery | High |
 
-Full list: 121 patterns including buffer overflows, race conditions, path traversal, open redirects, prototype pollution, format strings, null dereference, use-after-free, double-free, IAM misconfigurations, and more.
+Full list: 115 patterns including buffer overflows, race conditions, path traversal, open redirects, prototype pollution, format strings, null dereference, use-after-free, double-free, IAM misconfigurations, and more.
 
 ### Language-aware suppressions
 
@@ -452,7 +432,7 @@ The engine suppresses known false positives by language:
 
 | File | Purpose |
 |---|---|
-| `~/.config/aegis/license` | Persistent license key |
+| `~/.raknor/license.json` | Persistent license key |
 | `~/.raknor/config.json` | New Relic API key, DAST endpoints, scan targets |
 | `.aegis-brand.json` | White-label branding (company, logo, colors) |
 | `.aegis-suppress.json` | Finding suppressions (CWE + file path + reason) |
@@ -487,27 +467,20 @@ The engine suppresses known false positives by language:
 ## Architecture
 
 ```
-npx @raknor/aegis scan ./target
+aegis scan ./target
         │
         ▼
 ┌─────────────────────────────────────┐
-│  npm shim (lib/binary.js)           │
-│  Detects platform → resolves binary │
-│  ~/.aegis/bin/aegis (cached)        │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│  aegis-cli (Rust binary)            │
+│  aegis-cli (Rust binary, ~33 MB)    │
 │                                     │
 │  Parser (tree-sitter, 14 languages) │
 │  → AST extraction                   │
 │  → Call graph (petgraph)            │
 │  → Taint analysis (sources → sinks)│
-│  → 121 CWE pattern matching        │
-│  → Capability detection (NIST)      │
+│  → 115 CWE pattern matching         │
+│  → ConfirmedFinding (CWE-89, CWE-94)│
 │                                     │
-│  45 report generators               │
+│  40 report generators               │
 │  Ed25519 + FIPS P-256 license       │
 │  Everything local — nothing uploaded│
 └─────────────────────────────────────┘
@@ -520,5 +493,29 @@ npx @raknor/aegis scan ./target
 
 ---
 
-*AEGIS v3.5.2 — Pareidolia LLC (d/b/a Raknor AI / Equilateral AI)*
+## What AEGIS is
+
+AEGIS confirms static vulnerability findings with dynamically-derived probes — not
+inference from patterns, but observation of the vulnerability being exercised against
+a running target. Today this is demonstrated for SQL injection (CWE-89) and code injection
+(CWE-94); command injection and path traversal are in progress. It finds those findings
+via AST-based CWE detection across 14 languages, with inter-procedural taint analysis
+at varying depth (TypeScript at measured parity; C/C++ scoped; others heuristic).
+
+Each finding is classified as **Class-M** (mechanically verified) or **Class-J**
+(judgment/pattern-only). A finding earns Class-M through one of three criteria:
+taint-flow confirmation (source-to-sink dataflow traced), exploit proof (sandbox-validated
+PoC), or structural match (reachable CWE in a deterministic class). Findings that don't
+meet any criterion remain Class-J. This classification appears in SARIF output and
+drives downstream grading — Class-J findings never reach the confidence tier that
+Class-M evidence occupies.
+
+Findings map to 13 compliance frameworks (NIST, ISO, PCI-DSS, DORA, and nine others); these
+mappings identify which controls are at risk, not certify that they are satisfied. Output
+is SARIF 2.1.0, OSCAL, and HTML. The scanner is a single Rust binary, runs locally and
+offline, and maintains a cryptographic provenance chain across scan results.
+
+---
+
+*AEGIS v3.7.1 — Pareidolia LLC (d/b/a Raknor AI / Equilateral AI)*
 *https://aegis.raknor.ai*
