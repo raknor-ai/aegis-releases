@@ -10,7 +10,7 @@ A governed Cyber Reasoning System that discovers vulnerabilities across **14 lan
 
 - Single Rust binary (~33 MB), no runtime dependencies
 - 115 detection patterns covering 126 CWE classes via tree-sitter AST parsing
-- 110K+ LOC Rust, 1,805 tests
+- 110K+ LOC Rust, 1,802 passing tests
 - 40 report formats, 60+ CLI flags
 - 13 compliance frameworks mapped simultaneously
 - Scans 1.4M LOC in 22 seconds (~65K LOC/s)
